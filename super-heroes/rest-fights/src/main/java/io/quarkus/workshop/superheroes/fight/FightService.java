@@ -13,11 +13,21 @@ import java.util.Random;
 import static jakarta.transaction.Transactional.TxType.REQUIRED;
 import static jakarta.transaction.Transactional.TxType.SUPPORTS;
 
+import io.quarkus.workshop.superheroes.fight.client.HeroProxy;
+import io.quarkus.workshop.superheroes.fight.client.VillainProxy;
+import io.quarkus.workshop.superheroes.fight.client.Villain;
+import io.quarkus.workshop.superheroes.fight.client.Hero;
+
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.eclipse.microprofile.faulttolerance.Fallback;
+
 @ApplicationScoped
 @Transactional(SUPPORTS)
 public class FightService {
 
     @Inject Logger logger;
+    @RestClient HeroProxy heroProxy;
+    @RestClient VillainProxy villainProxy;
 
     private final Random random = new Random();
 
@@ -29,9 +39,43 @@ public class FightService {
         return Fight.findById(id);
     }
 
-    public Fighters findRandomFighters() {
-        // Will be implemented later
-        return null;
+    Fighters findRandomFighters() {
+        Hero hero = findRandomHero();
+        Villain villain = findRandomVillain();
+        Fighters fighters = new Fighters();
+        fighters.hero = hero;
+        fighters.villain = villain;
+        return fighters;
+    }
+    
+    @Fallback(fallbackMethod = "fallbackRandomVillain")
+    Villain findRandomVillain() {
+        return villainProxy.findRandomVillain();
+    }
+    
+    @Fallback(fallbackMethod = "fallbackRandomHero")
+    Hero findRandomHero() {
+       return heroProxy.findRandomHero();
+    }
+
+    public Hero fallbackRandomHero() {
+        logger.warn("Falling back on Hero");
+        Hero hero = new Hero();
+        hero.name = "Fallback hero";
+        hero.picture = "https://dummyimage.com/240x320/1e8fff/ffffff&text=Fallback+Hero";
+        hero.powers = "Fallback hero powers";
+        hero.level = 1;
+        return hero;
+    }
+    
+    public Villain fallbackRandomVillain() {
+        logger.warn("Falling back on Villain");
+        Villain villain = new Villain();
+        villain.name = "Fallback villain";
+        villain.picture = "https://dummyimage.com/240x320/b22222/ffffff&text=Fallback+Villain";
+        villain.powers = "Fallback villain powers";
+        villain.level = 42;
+        return villain;
     }
 
     @Transactional(REQUIRED)
