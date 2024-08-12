@@ -36,7 +36,8 @@ import io.quarkus.workshop.superheroes.fight.client.Hero;
 import io.quarkus.workshop.superheroes.fight.client.DefaultTestHero;
 import io.quarkus.workshop.superheroes.fight.client.DefaultTestVillain;
 
-
+import java.time.Instant;
+import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -198,5 +199,30 @@ public class FightResourceTest {
         return new TypeRef<List<Fight>>() {
             // Kept empty on purpose
         };
+    }
+
+    @Test
+    void shouldNarrate() {
+        Fight fight = new Fight();
+        fight.fightDate = Instant.now();
+        fight.winnerName = DEFAULT_WINNER_NAME;
+        fight.winnerLevel = DEFAULT_WINNER_LEVEL;
+        fight.winnerPowers = DEFAULT_WINNER_POWERS;
+        fight.winnerPicture = DEFAULT_WINNER_PICTURE;
+        fight.loserName = DEFAULT_LOSER_NAME;
+        fight.loserLevel = DEFAULT_LOSER_LEVEL;
+        fight.loserPowers = DEFAULT_LOSER_POWERS;
+        fight.loserPicture = DEFAULT_LOSER_PICTURE;
+        fight.winnerTeam = "villains";
+        fight.loserTeam = "heroes";
+
+        given().body(fight)
+            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .header(ACCEPT, TEXT_PLAIN)
+            .when()
+            .post("/api/fights/narrate")
+            .then()
+            .statusCode(CREATED.getStatusCode())
+            .body(startsWith("Lorem ipsum dolor sit amet"));
     }
 }

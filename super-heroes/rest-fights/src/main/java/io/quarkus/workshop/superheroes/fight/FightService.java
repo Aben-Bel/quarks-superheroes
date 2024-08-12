@@ -14,6 +14,7 @@ import static jakarta.transaction.Transactional.TxType.REQUIRED;
 import static jakarta.transaction.Transactional.TxType.SUPPORTS;
 
 import io.quarkus.workshop.superheroes.fight.client.HeroProxy;
+import io.quarkus.workshop.superheroes.fight.client.NarrationProxy;
 import io.quarkus.workshop.superheroes.fight.client.VillainProxy;
 import io.quarkus.workshop.superheroes.fight.client.Villain;
 import io.quarkus.workshop.superheroes.fight.client.Hero;
@@ -21,9 +22,13 @@ import io.quarkus.workshop.superheroes.fight.client.Hero;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+
 @ApplicationScoped
 @Transactional(SUPPORTS)
 public class FightService {
+    @Channel("fights") Emitter<Fight> emitter;
 
     @Inject Logger logger;
     @RestClient HeroProxy heroProxy;
@@ -50,7 +55,9 @@ public class FightService {
     
     @Fallback(fallbackMethod = "fallbackRandomVillain")
     Villain findRandomVillain() {
-        return villainProxy.findRandomVillain();
+        Villain v = villainProxy.findRandomVillain();
+        logger.debug("villian error: " + v.toString());
+        return v;
     }
     
     @Fallback(fallbackMethod = "fallbackRandomHero")
@@ -98,6 +105,7 @@ public class FightService {
         fight.fightDate = Instant.now();
         fight.persist();
 
+        emitter.send(fight).toCompletableFuture().join();
         return fight;
     }
 
@@ -133,4 +141,10 @@ public class FightService {
         return fight;
     }
 
+    @RestClient
+    NarrationProxy narrationProxy;
+
+    public String narrateFight(Fight fight) {
+        return narrationProxy.narrate(fight);
+    }
 }
